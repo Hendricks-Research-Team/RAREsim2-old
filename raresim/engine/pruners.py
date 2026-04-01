@@ -9,6 +9,18 @@ class Pruner(ABC):
     def transform(self) -> None:
        pass
 
+
+def _write_pruned_variants_file(config: RunConfig, legend: Legend, rows_to_keep: list) -> None:
+    base_path = config.args.output_legend if config.args.output_legend is not None else config.args.input_legend
+    if base_path is None:
+        return
+
+    with open(f'{base_path}-pruned-variants', 'w') as trimmed_vars_file:
+        trimmed_vars_file.write("\t".join(legend.get_header()) + '\n')
+        for row in range(legend.row_count()):
+            if row not in rows_to_keep:
+                trimmed_vars_file.write("\t".join([y for x, y in legend[row].items()]) + '\n')
+
 class StandardPruner(Pruner):
     def __init__(self, config: RunConfig, bins: list, legend: Legend, matrix: SparseMatrix):
         """
@@ -54,20 +66,15 @@ class StandardPruner(Pruner):
         print_bin_comparison(self.__bins, input_bin_assignments, bin_assignments)
 
         rows_to_keep = self.get_all_kept_rows(bin_assignments)
-
-        trimmed_vars_file = open(
-            f'{self.__config.args.output_legend if self.__config.args.output_legend is not None else self.__config.args.input_legend}-pruned-variants', 'w')
-        trimmed_vars_file.write("\t".join(self.__legend.get_header()) + '\n')
+        _write_pruned_variants_file(self.__config, self.__legend, rows_to_keep)
         for row in range(self.__matrix.num_rows()):
             if row not in rows_to_keep:
-                trimmed_vars_file.write("\t".join([y for x, y in self.__legend[row].items()]) + '\n')
                 self.__matrix.prune_row(row, self.__matrix.row_num(row))
                 if self.__matrix.row_num(row) != 0:
                     raise Exception(
                         "ERROR: Trimming pruned row to a row of zeros did not work. Failing so that we don't write a bad haps file.")
 
         rows_to_keep.sort()
-        trimmed_vars_file.close()
         if self.__config.remove_zeroed_rows:
             rows_to_remove = [x for x in range(self.__matrix.num_rows()) if x not in rows_to_keep]
             for rowId in rows_to_remove[::-1]:
@@ -211,20 +218,15 @@ class FunctionalSplitPruner(Pruner):
         print_bin_comparison(self.__bins['syn'], input_bin_assignments['syn'], bin_assignments['syn'])
 
         rows_to_keep = self.get_all_kept_rows(bin_assignments)
-        
-        trimmed_vars_file = open(
-            f'{self.__config.args.output_legend if self.__config.args.output_legend is not None else self.__config.args.input_legend}-pruned-variants', 'w')
-        trimmed_vars_file.write("\t".join(self.__legend.get_header()) + '\n')
+        _write_pruned_variants_file(self.__config, self.__legend, rows_to_keep)
         for row in range(self.__matrix.num_rows()):
             if row not in rows_to_keep:
-                trimmed_vars_file.write("\t".join([y for x, y in self.__legend[row].items()]) + '\n')
                 self.__matrix.prune_row(row, self.__matrix.row_num(row))
                 if self.__matrix.row_num(row) != 0:
                     raise Exception(
                         "ERROR: Trimming pruned row to a row of zeros did not work. Failing so that we don't write a bad haps file.")
 
         rows_to_keep.sort()
-        trimmed_vars_file.close()
         if self.__config.remove_zeroed_rows:
             rows_to_remove = [x for x in range(self.__matrix.num_rows()) if x not in rows_to_keep]
             for rowId in rows_to_remove[::-1]:
@@ -353,14 +355,7 @@ class ProbabilisticPruner(Pruner):
         else:
             print_observed_afd_comparison(input_observed_afd, summarize_observed_afd(self.__matrix))
 
-        trimmed_vars_file = open(
-            f'{self.__config.args.output_legend if self.__config.args.output_legend is not None else self.__config.args.input_legend}-pruned-variants', 'w')
-        trimmed_vars_file.write("\t".join(self.__legend.get_header()) + '\n')
-        for row in range(self.__matrix.num_rows()):
-            if row not in rows_to_keep:
-                trimmed_vars_file.write("\t".join([y for x, y in self.__legend[row].items()]) + '\n')
-
-        trimmed_vars_file.close()
+        _write_pruned_variants_file(self.__config, self.__legend, rows_to_keep)
 
         if self.__config.remove_zeroed_rows:
             rows_to_remove = [x for x in range(self.__matrix.num_rows()) if x not in rows_to_keep]
