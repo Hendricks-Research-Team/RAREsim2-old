@@ -1,13 +1,15 @@
 import unittest
 import random
 import tempfile
+import io
 from argparse import Namespace
 import os
+from contextlib import redirect_stdout
 
 from raresim.common.legend import Legend
 from raresim.common.sparse import SparseMatrix
 from raresim.engine.config import RunConfig
-from raresim.engine.pruners import StandardPruner, FunctionalSplitPruner
+from raresim.engine.pruners import StandardPruner, FunctionalSplitPruner, ProbabilisticPruner
 
 
 class TestStandardPruner(unittest.TestCase):
@@ -71,7 +73,7 @@ class TestStandardPruner(unittest.TestCase):
         os.rmdir(self.temp_dir)
         
     def test_assign_bins(self):
-        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
+        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
         run_config = RunConfig(args)
         assert(run_config.run_type == "standard")
         
@@ -85,7 +87,7 @@ class TestStandardPruner(unittest.TestCase):
         assert(len(assigned_bins[3]) == 20)
         
     def test_full_transform_no_z(self):
-        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
+        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "standard")
         
@@ -124,7 +126,7 @@ class TestStandardPruner(unittest.TestCase):
             assert(len(lines) - 1 == num_rows_with_0_columns)
     
     def test_full_transform_with_z(self):
-        args = Namespace(z=True, exp_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
+        args = Namespace(z=True, exp_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "standard")
         
@@ -156,7 +158,7 @@ class TestStandardPruner(unittest.TestCase):
             assert(len(lines) - 1 == 100 - total_kept_variants)
     
     def test_full_transform_with_keep_protected(self):
-        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=True, output_legend=self.legend_file, input_legend=self.legend_file, verbose=True)
+        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=True, output_legend=self.legend_file, input_legend=self.legend_file, verbose=True)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "standard")
         
@@ -198,7 +200,7 @@ class TestStandardPruner(unittest.TestCase):
             [6, 10, 3]    # Bin 2: AC=6-10, need 3 (have 20, will prune ~17 into extra_rows, processed first)
         ]
         
-        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
+        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "standard")
         
@@ -230,7 +232,7 @@ class TestStandardPruner(unittest.TestCase):
         # Bin 2 prunes ~2 into extra_rows, but bin 1 needs ~10 more
         # So bin 1 must borrow ~8 from reserve_pool (bin 3 with AC > 10, which has 20 variants)
         
-        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
+        args = Namespace(z=False, exp_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "standard")
         
@@ -268,7 +270,7 @@ class TestStandardPruner(unittest.TestCase):
             [6, 10, 2]    # Bin 2: AC=6-10, need 2 functional variants
         ]
         
-        args = Namespace(z=False, exp_bins=None, fun_bins_only='some_bins', syn_bins_only=None, exp_fun_bins=None, exp_syn_bins=None, small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
+        args = Namespace(z=False, exp_bins=None, fun_bins_only='some_bins', syn_bins_only=None, exp_fun_bins=None, exp_syn_bins=None, small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "fun_only")
         
@@ -308,7 +310,7 @@ class TestStandardPruner(unittest.TestCase):
             [6, 10, 2]    # Bin 2: AC=6-10, need 2 synonymous variants
         ]
         
-        args = Namespace(z=False, exp_bins=None, fun_bins_only=None, syn_bins_only='some_bins', exp_fun_bins=None, exp_syn_bins=None, small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
+        args = Namespace(z=False, exp_bins=None, fun_bins_only=None, syn_bins_only='some_bins', exp_fun_bins=None, exp_syn_bins=None, small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "syn_only")
         
@@ -402,7 +404,7 @@ class TestFunctionalSplitPruner(unittest.TestCase):
     
     def test_assign_bins(self):
         """Test that variants are correctly assigned to functional and synonymous bins"""
-        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
+        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
         run_config = RunConfig(args)
         assert(run_config.run_type == "func_split")
         
@@ -423,7 +425,7 @@ class TestFunctionalSplitPruner(unittest.TestCase):
     
     def test_full_transform_no_z(self):
         """Test full transform without z-flag (keep zeroed rows)"""
-        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
+        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "func_split")
         
@@ -448,7 +450,7 @@ class TestFunctionalSplitPruner(unittest.TestCase):
     
     def test_full_transform_with_z(self):
         """Test full transform with z-flag (remove zeroed rows)"""
-        args = Namespace(z=True, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
+        args = Namespace(z=True, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "func_split")
         
@@ -476,7 +478,7 @@ class TestFunctionalSplitPruner(unittest.TestCase):
     
     def test_full_transform_with_keep_protected(self):
         """Test that protected variants are not pruned in func_split mode"""
-        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=True, output_legend=self.legend_file, input_legend=self.legend_file, verbose=True)
+        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=True, output_legend=self.legend_file, input_legend=self.legend_file, verbose=True)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "func_split")
         
@@ -524,7 +526,7 @@ class TestFunctionalSplitPruner(unittest.TestCase):
             ]
         }
         
-        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, prob=False, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
+        args = Namespace(z=False, exp_bins=None, exp_fun_bins='some_bins', exp_syn_bins='some_bins', small_sample=True, activation_threshold=5, stop_threshold=2, keep_protected=False, output_legend=self.legend_file, input_legend=self.legend_file, verbose=False)
         runConfig = RunConfig(args)
         assert(runConfig.run_type == "func_split")
         
@@ -546,3 +548,89 @@ class TestFunctionalSplitPruner(unittest.TestCase):
         for bin_id in after_assigned_bins['syn']:
             for row_id in after_assigned_bins['syn'][bin_id]:
                 assert(self.legend[row_id]['fun'] == 'syn'), f"Found non-synonymous variant {row_id} in synonymous bin {bin_id}"
+
+
+class TestProbabilisticPruner(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.legend_file = os.path.join(self.temp_dir, "legend")
+        self.legend = Legend(["id", "position", "a0", "a1", "prob"])
+        self.legend.add_row(["var0", "1", "A", "G", "0.0"])
+        self.legend.add_row(["var1", "2", "A", "G", "1.0"])
+        self.legend.add_row(["var2", "3", "A", "G", "."])
+
+        self.matrix = SparseMatrix(cols=4)
+        self.matrix.add_row([0, 1, 2])
+        self.matrix.add_row([1, 3])
+        self.matrix.add_row([0, 2])
+
+    def tearDown(self):
+        pruned_file = f'{self.legend_file}-pruned-variants'
+        if os.path.exists(pruned_file):
+            os.remove(pruned_file)
+        os.rmdir(self.temp_dir)
+
+    def test_probabilistic_pruning_removes_whole_rows(self):
+        args = Namespace(
+            z=False,
+            exp_bins=None,
+            exp_fun_bins=None,
+            exp_syn_bins=None,
+            fun_bins_only=None,
+            syn_bins_only=None,
+            prob=True,
+            small_sample=True,
+            activation_threshold=10,
+            stop_threshold=20,
+            keep_protected=False,
+            output_legend=self.legend_file,
+            input_legend=self.legend_file,
+            verbose=False
+        )
+        run_config = RunConfig(args)
+        pruner = ProbabilisticPruner(run_config, self.legend, self.matrix)
+
+        pruner.transform()
+
+        self.assertEqual(self.matrix.row_num(0), 0, "prob=0.0 should always prune the whole variant")
+        self.assertEqual(self.matrix.get_row(0), [0, 0, 0, 0])
+        self.assertEqual(self.matrix.get_row(1), [0, 1, 0, 1], "prob=1.0 should always keep the variant")
+        self.assertEqual(self.matrix.get_row(2), [1, 0, 1, 0], "'.' should leave the variant unchanged")
+
+        pruned_file = f'{self.legend_file}-pruned-variants'
+        self.assertTrue(os.path.exists(pruned_file))
+        with open(pruned_file, 'r') as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 2)
+        self.assertIn("var0", lines[1])
+
+    def test_probabilistic_pruning_prints_allele_frequency_distributions(self):
+        args = Namespace(
+            z=False,
+            exp_bins=None,
+            exp_fun_bins=None,
+            exp_syn_bins=None,
+            fun_bins_only=None,
+            syn_bins_only=None,
+            prob=True,
+            small_sample=True,
+            activation_threshold=10,
+            stop_threshold=20,
+            keep_protected=False,
+            output_legend=self.legend_file,
+            input_legend=self.legend_file,
+            verbose=False
+        )
+        run_config = RunConfig(args)
+        pruner = ProbabilisticPruner(run_config, self.legend, self.matrix)
+
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            pruner.transform()
+
+        output = stdout.getvalue()
+        self.assertIn("Input allele frequency distribution:", output)
+        self.assertIn("New allele frequency distribution:", output)
+        self.assertIn("Bin", output)
+        self.assertIn("Expected", output)
+        self.assertIn("Actual", output)

@@ -35,6 +35,26 @@ def print_bin(bins: list, bin_assignments: dict):
         print(f"{col1:<12}{col2:<18}{col3:<10}")
 
 
+def print_observed_afd(matrix: SparseMatrix) -> None:
+    """
+    Print the observed allele frequency distribution for the current matrix.
+
+    This mirrors the standard pruning table shape, but uses exact observed
+    allele counts and reports `N/A` for the expected column.
+    """
+    allele_count_bins = {}
+    for row_id in range(matrix.num_rows()):
+        allele_count = matrix.row_num(row_id)
+        if allele_count == 0:
+            continue
+        allele_count_bins.setdefault(allele_count, 0)
+        allele_count_bins[allele_count] += 1
+
+    print(f"{'Bin':<12}{'Expected':<18}{'Actual':<10}")
+    for allele_count in sorted(allele_count_bins):
+        print(f"[{allele_count},{allele_count}]".ljust(12) + f"{'N/A':<18}{allele_count_bins[allele_count]:<10}")
+
+
 def prune_bins(extra_rows: list, bin_assignments: dict, legend: Legend, matrix: SparseMatrix, bins: list,
                activation_threshold: int, stopping_threshold: int) -> None:
     """

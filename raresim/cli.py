@@ -133,7 +133,7 @@ def parseCommand():
 
     sim_parser.add_argument('-prob',
                         action='store_true',
-                        help='Variants are pruned allele by allele given a probability of removal in the legend file')
+                        help='Variants are pruned row by row using the keep probability in the legend file')
 
     sim_parser.add_argument('--small_sample',
                         action='store_true',

@@ -158,7 +158,7 @@ options:
                         Expected number of variants per MAC bin for only synonymous variants
   -z                    Monomorphic and pruned variants (rows of zeros) are removed from the output
                         haplotype file
-  -prob                 Variants are pruned allele by allele given a probability of removal in the
+  -prob                 Variants are pruned row by row using the keep probability in the
                         legend file
   --small_sample        Overrides error to allow for simulation of small sample sizes (<10,000
                         haplotypes)
@@ -331,9 +331,8 @@ Writing new haplotype file
 [====================] 100%
 ```
 
-
 #### Given Probabilities
-To prune variants using known or given probabilities, add a column to the legend file (`-l`) named "prob". A random number between 0 and 1 is generated for each variant, and if the number is greater than the probability, the variant is removed from the data. When using the `-z` flag, monomorphic and pruned variants are removed from the output haplotype file, and a pruned-variants file is created.
+To prune variants using known or given probabilities, add a column to the legend file (`-l`) named `prob`. A single random draw is generated for each variant row, and the row is kept with the probability given in the legend. When using the `-z` flag, fully pruned and monomorphic variants are removed from the output haplotype file, and a pruned-variants file is created.
 
 ```text
 $ python3 -m raresim sim \

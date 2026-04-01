@@ -17,50 +17,9 @@ from argparse import Namespace
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 temp_dir = tempfile.mkdtemp()
 
-print("=" * 60)
-print("PROBABILISTIC PRUNING (seed=42)")
-print("=" * 60)
-random.seed(42)
-haps_file = os.path.join(data_dir, 'ProbExample.haps')
-legend_file = os.path.join(data_dir, 'ProbExample.probs.legend')
-output_hap = os.path.join(temp_dir, 'prob_output.haps.gz')
-
 reader = SparseMatrixReader()
-original_matrix = reader.loadSparseMatrix(haps_file)
-original_alleles = sum(original_matrix.row_num(i) for i in range(original_matrix.num_rows()))
-print(f"Original alleles: {original_alleles}")
 
-args = Namespace(
-    sparse_matrix=haps_file,
-    input_legend=legend_file,
-    output_legend=None,
-    output_hap=output_hap,
-    exp_bins=None,
-    exp_fun_bins=None,
-    exp_syn_bins=None,
-    fun_bins_only=None,
-    syn_bins_only=None,
-    prob=True,
-    z=False,
-    remove_zeroed_rows=False,
-    small_sample=True,
-    keep_protected=False,
-    activation_threshold=10,
-    stop_threshold=20,
-    verbose=False
-)
-
-config = RunConfig(args)
-runner = DefaultRunner(config)
-runner.run()
-
-output_matrix = reader.loadSparseMatrix(output_hap)
-output_alleles = sum(output_matrix.row_num(i) for i in range(output_matrix.num_rows()))
-print(f"Output alleles: {output_alleles}")
-print(f"Output rows: {output_matrix.num_rows()}")
-print(f"Output cols: {output_matrix.num_cols()}")
-
-print("\n" + "=" * 60)
+print("=" * 60)
 print("STANDARD PRUNING (seed=123)")
 print("=" * 60)
 random.seed(123)
@@ -85,7 +44,6 @@ args = Namespace(
     exp_syn_bins=None,
     fun_bins_only=None,
     syn_bins_only=None,
-    prob=False,
     z=True,
     remove_zeroed_rows=True,
     small_sample=True,
@@ -126,7 +84,6 @@ args = Namespace(
     exp_syn_bins=os.path.join(data_dir, 'test_syn_bins.txt'),
     fun_bins_only=None,
     syn_bins_only=None,
-    prob=False,
     z=True,
     remove_zeroed_rows=True,
     small_sample=True,

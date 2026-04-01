@@ -340,6 +340,7 @@ class FunctionalSplitPruner(Pruner):
                 return i
         return len(bins)
 
+
 class ProbabilisticPruner(Pruner):
     def __init__(self, config: RunConfig, legend: Legend, matrix: SparseMatrix):
         self.__config: RunConfig = config
@@ -348,41 +349,44 @@ class ProbabilisticPruner(Pruner):
 
     def transform(self):
         """
-        Iterate over the input data and probabilistically remove columns (i.e. variants) from rows
-        according to the probabilities specified in the legend file.
+        Prune whole variants using the keep probability in the legend.
 
-        The probability of a variant being kept is given by the value in the 'prob' column of the legend.
-        A random number between 0 and 1 is generated for each variant, and if the number is greater than
-        the probability, the variant is removed from the data.
-
-        :return: None
+        A single random draw is made per row. If the draw is greater than the
+        legend's `prob` value, the whole variant is removed.
         """
+        print('Input allele frequency distribution:')
+        print_observed_afd(self.__matrix)
+
         rows_to_keep = []
-        
+
         for row_index in range(self.__matrix.num_rows()):
-            row = self.__matrix.get_row_raw(row_index)
-            for col_index in row:
-                flip = random.uniform(0, 1)
-                legend_val = self.__legend[row_index]['prob']
-                if legend_val == '.':
-                    continue
-                elif flip > float(legend_val):
-                    self.__matrix.remove(row_index, col_index)
-            
-            if self.__matrix.row_num(row_index) > 0:
+            legend_val = self.__legend[row_index]['prob']
+            if legend_val == '.':
                 rows_to_keep.append(row_index)
-        
+                continue
+
+            keep_probability = float(legend_val)
+            if random.uniform(0, 1) <= keep_probability:
+                rows_to_keep.append(row_index)
+                continue
+
+            self.__matrix.prune_row(row_index, self.__matrix.row_num(row_index))
+
+        print('\nNew allele frequency distribution:')
+        print_observed_afd(self.__matrix)
+
         trimmed_vars_file = open(
             f'{self.__config.args.output_legend if self.__config.args.output_legend is not None else self.__config.args.input_legend}-pruned-variants', 'w')
         trimmed_vars_file.write("\t".join(self.__legend.get_header()) + '\n')
         for row in range(self.__matrix.num_rows()):
             if row not in rows_to_keep:
                 trimmed_vars_file.write("\t".join([y for x, y in self.__legend[row].items()]) + '\n')
-        
+
         trimmed_vars_file.close()
-        
+
         if self.__config.remove_zeroed_rows:
             rows_to_remove = [x for x in range(self.__matrix.num_rows()) if x not in rows_to_keep]
             for rowId in rows_to_remove[::-1]:
                 self.__legend.remove_row(rowId)
                 self.__matrix.remove_row(rowId)
+
