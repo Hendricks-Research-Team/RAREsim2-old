@@ -25,6 +25,20 @@ def _bin_label_from_standard_bins(bins: list, bin_id: int, total_bins: int) -> s
     return f"[{str(bins[bin_id - 1][1] + 1)},\u221E]"
 
 
+def print_bin(bins: list, bin_assignments: dict):
+    """
+    Backward-compatible bin printer used by existing tests and callers.
+    """
+    print(f"{'Bin':<12}{'Expected':<12}{'Actual':<10}")
+    for bin_id in range(len(bin_assignments)):
+        expected = bins[bin_id][2] if bin_id < len(bins) else "N/A"
+        print(
+            f"{_bin_label_from_standard_bins(bins, bin_id, len(bin_assignments)):<12}"
+            f"{_format_expected(expected):<12}"
+            f"{len(bin_assignments[bin_id]):<10}"
+        )
+
+
 def print_bin_comparison(bins: list, input_assignments: dict, output_assignments: dict):
     print(f"{'Bin':<12}{'Expected':<12}{'Input':<10}{'Output':<10}")
     for bin_id in range(len(input_assignments)):
