@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "raresim"
-version = "3.0.2"
+version = "3.0.3"
 description = "A python interface for scalable rare-variant simulations"
 readme = "README.md"
 requires-python = ">=3.10"
