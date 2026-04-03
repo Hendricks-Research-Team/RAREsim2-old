@@ -3,11 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-![Status](https://img.shields.io/badge/status-moved-red)
+![Status](https://img.shields.io/badge/status-archived-red)
 
-> **This project has moved to a new location: https://github.com/Hendricks-Research-Team/RAREsim2** 
+> **This repository is no longer maintained and has been archived.**
 >
-> This repository is no longer maintained and has been archived. Please use the new repository for all updates.
+> Please see https://github.com/Hendricks-Research-Team/RAREsim2 for all updates.
 
 # RAREsim2
 Python interface for flexible simulation of rare-variant genetic data using real haplotypes
